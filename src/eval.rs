@@ -1,5 +1,4 @@
 use crate::syntax::*;
-use std::collections::HashSet;
 use std::iter::zip;
 
 pub fn execute(mut program: Program, mut goal: Goal) -> Answer {
@@ -9,7 +8,7 @@ pub fn execute(mut program: Program, mut goal: Goal) -> Answer {
     Answer::Valid(true)
 }
 
-pub fn unify(t1: &Term, t2: &Term) -> Option<Substitution> {
+fn unify(t1: &Term, t2: &Term) -> Option<Substitution> {
     let t1 = t1.clone();
     let t2 = t2.clone();
     match (t1, t2) {
@@ -45,7 +44,7 @@ fn unify_list(mut ls: Vec<(Term, Term)>) -> Option<Substitution> {
     }
 }
 
-fn dfs(program: &Program, goals: Goal, sbst: Substitution) -> Vec<Substitution> {
+pub fn dfs(program: &Program, goals: Goal, sbst_root: &Substitution) -> Vec<Substitution> {
     let mut goals = goals.clone();
     match goals.pop() {
         Some(goal) => {
@@ -53,17 +52,23 @@ fn dfs(program: &Program, goals: Goal, sbst: Substitution) -> Vec<Substitution> 
             for clause in program {
                 let clause = clause.replace_newvar();
                 match unify(&goal, &clause.conclusion) {
-                    Some(new_sbst) => {
+                    Some(sbst_now) => {
+                        let new_sbst = composite_sbst(&sbst_root, &sbst_now);
                         let mut newgoal = goals.clone();
                         let mut goal2 = clause.assumptions.clone();
                         newgoal.append(&mut goal2);
-                        dfs(program, newgoal, composite_sbst(&sbst, &new_sbst));
+                        let sbst_leefs = dfs(program, newgoal, &new_sbst);
+                        let mut local_ans = sbst_leefs
+                            .iter()
+                            .map(|sb| composite_sbst(&new_sbst, &sb))
+                            .collect::<Vec<Substitution>>();
+                        ans.append(&mut local_ans);
                     }
                     None => (),
                 }
             }
             ans
         }
-        None => vec![sbst],
+        None => vec![sbst_root.clone()],
     }
 }

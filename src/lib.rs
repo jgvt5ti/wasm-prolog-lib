@@ -1,6 +1,6 @@
-use crate::eval::unify;
 use crate::eval::*;
 use crate::parser::prolog;
+use syntax::Substitution;
 use wasm_bindgen::prelude::*;
 
 mod eval;
@@ -17,12 +17,13 @@ pub fn run(program: &str, goal: &str) -> String {
 
 #[test]
 fn parse_test() {
-    let a = "q(X, b)";
-    let b = "q(a(b), Z)";
-    let ta = prolog::term(a);
-    let tb = prolog::term(b);
+    let a = "q(X).";
+    let b = "q(X) :- p(X).\np(a).";
+    let ta = prolog::goal(a);
+    let tb = prolog::program(b);
+    let sbst = Substitution::new();
     match (ta, tb) {
-        (Ok(term1), Ok(term2)) => println!("{:?}", unify(&term1, &term2)),
+        (Ok(term1), Ok(term2)) => println!("{:?}", dfs(&term2, term1, &sbst)),
         _ => println!("unko"),
     }
 }
