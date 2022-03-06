@@ -1,3 +1,3 @@
-# wasm_prolog
+# wasm-prolog
 
-https://jgvt5ti.github.io/wasmprolog/
+https://jgvt5ti.github.io/wasm-prolog/
