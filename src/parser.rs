@@ -12,7 +12,7 @@ peg::parser! ( pub grammar prolog() for str {
         / _ cncl:term() "." { Statement { conclusion: cncl, assumptions: Vec::new() } }
 
     pub rule program() -> Program
-        = __ statements:(statement() ** __ ) { statements }
+        = __ statements:(statement() ** __ ) __ { statements }
 
     pub rule goal() -> Goal
         = _ list:(term() ** ",") "." { list }

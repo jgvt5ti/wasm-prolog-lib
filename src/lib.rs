@@ -10,7 +10,7 @@ mod syntax;
 pub fn run(program: &str, goal: &str) -> String {
     match (prolog::program(program), prolog::goal(goal)) {
         (Ok(pr), Ok(gl)) => execute(&pr, &gl).to_string(),
-        _ => String::from("error!"),
+        _ => String::from("Syntax Error"),
     }
 }
 
