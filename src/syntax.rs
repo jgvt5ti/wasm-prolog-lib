@@ -21,6 +21,17 @@ pub fn composite_sbst_opt(
     }
 }
 
+fn sbst_to_string(sbst: &Substitution) -> String {
+    let mut ans = String::new();
+    for (i, (k, v)) in sbst.iter().enumerate() {
+        if i > 0 {
+            ans += ", ";
+        }
+        ans += &(format!("{} = {}", &k, &(v.to_string())));
+    }
+    ans
+}
+
 // make a fresh variable
 static mut VAR_COUNT: u32 = 0;
 
@@ -70,6 +81,24 @@ impl Term {
             ),
         }
     }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            Term::Atom(s) => s.clone(),
+            Term::Var(s) => s.clone(),
+            Term::Pred(name, args) => {
+                let mut ans = name.clone() + "(";
+                for (i, term) in (&args).iter().enumerate() {
+                    if i > 0 {
+                        ans += ", "
+                    }
+                    ans += &(term.to_string());
+                }
+                ans += ")";
+                ans
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -107,18 +136,45 @@ pub type Program = Vec<Statement>;
 
 pub type Goal = Vec<Term>;
 
+pub fn goals_free_vars(goal: &Goal) -> HashSet<String> {
+    goal.iter().fold(HashSet::new(), |sum, x| {
+        let mut sum = sum.clone();
+        sum.extend(x.free_vars());
+        sum
+    })
+}
+
+pub fn select_vars(sbst: &Substitution, varset: &HashSet<String>) -> Substitution {
+    sbst.clone()
+        .into_iter()
+        .filter(|(k, _)| varset.contains(k))
+        .collect()
+}
+
 #[derive(Debug, Clone)]
 pub enum Answer {
     Valid(bool),
-    Instance,
+    Instance(Vec<Substitution>),
 }
 
 impl Answer {
     pub fn to_string(&self) -> String {
-        match *self {
+        match self {
             Answer::Valid(true) => String::from("yes"),
             Answer::Valid(false) => String::from("no"),
-            Answer::Instance => String::from("a"),
+            Answer::Instance(list) => {
+                if list.is_empty() {
+                    return String::from("Not Satisfiable!!");
+                }
+                let mut ans = String::new();
+                for (i, sbst) in (&list).iter().enumerate() {
+                    if i > 0 {
+                        ans += "<br>";
+                    }
+                    ans += &sbst_to_string(sbst);
+                }
+                ans
+            }
         }
     }
 }

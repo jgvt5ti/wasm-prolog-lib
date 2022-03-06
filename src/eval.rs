@@ -1,11 +1,19 @@
 use crate::syntax::*;
 use std::iter::zip;
 
-pub fn execute(mut program: Program, mut goal: Goal) -> Answer {
-    program.pop();
-    goal.pop();
-    while !goal.is_empty() {}
-    Answer::Valid(true)
+pub fn execute(program: &Program, goal: &Goal) -> Answer {
+    let sbst = Substitution::new();
+    let goal_vars = goals_free_vars(goal);
+    let sbsts: Vec<Substitution> = dfs(&program, &goal, &sbst);
+    if goal_vars.is_empty() {
+        Answer::Valid(!sbsts.is_empty())
+    } else {
+        let ans = sbsts
+            .iter()
+            .map(|sbst| select_vars(sbst, &goal_vars))
+            .collect();
+        Answer::Instance(ans)
+    }
 }
 
 fn unify(t1: &Term, t2: &Term) -> Option<Substitution> {
@@ -44,7 +52,7 @@ fn unify_list(mut ls: Vec<(Term, Term)>) -> Option<Substitution> {
     }
 }
 
-pub fn dfs(program: &Program, goals: Goal, sbst_root: &Substitution) -> Vec<Substitution> {
+pub fn dfs(program: &Program, goals: &Goal, sbst_root: &Substitution) -> Vec<Substitution> {
     let mut goals = goals.clone();
     match goals.pop() {
         Some(goal) => {
@@ -57,7 +65,7 @@ pub fn dfs(program: &Program, goals: Goal, sbst_root: &Substitution) -> Vec<Subs
                         let mut newgoal = goals.clone();
                         let mut goal2 = clause.assumptions.clone();
                         newgoal.append(&mut goal2);
-                        let sbst_leefs = dfs(program, newgoal, &new_sbst);
+                        let sbst_leefs = dfs(program, &newgoal, &new_sbst);
                         let mut local_ans = sbst_leefs
                             .iter()
                             .map(|sb| composite_sbst(&new_sbst, &sb))
