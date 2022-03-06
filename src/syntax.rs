@@ -144,6 +144,10 @@ pub fn goals_free_vars(goal: &Goal) -> HashSet<String> {
     })
 }
 
+pub fn goal_substitute(goal: &Goal, sbst: &Substitution) -> Goal {
+    goal.into_iter().map(|term| term.substitute(sbst)).collect()
+}
+
 pub fn select_vars(sbst: &Substitution, varset: &HashSet<String>) -> Substitution {
     sbst.clone()
         .into_iter()
@@ -154,7 +158,7 @@ pub fn select_vars(sbst: &Substitution, varset: &HashSet<String>) -> Substitutio
 #[derive(Debug, Clone)]
 pub enum Answer {
     Valid(bool),
-    Instance(Vec<Substitution>),
+    Satisfiable(Option<Vec<Substitution>>),
 }
 
 impl Answer {
@@ -162,10 +166,7 @@ impl Answer {
         match self {
             Answer::Valid(true) => String::from("yes"),
             Answer::Valid(false) => String::from("no"),
-            Answer::Instance(list) => {
-                if list.is_empty() {
-                    return String::from("Not Satisfiable!!");
-                }
+            Answer::Satisfiable(Some(list)) => {
                 let mut ans = String::new();
                 for (i, sbst) in (&list).iter().enumerate() {
                     if i > 0 {
@@ -175,6 +176,7 @@ impl Answer {
                 }
                 ans
             }
+            Answer::Satisfiable(None) => String::from("Not Satisfiable!!"),
         }
     }
 }

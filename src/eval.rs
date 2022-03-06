@@ -4,15 +4,20 @@ use std::iter::zip;
 pub fn execute(program: &Program, goal: &Goal) -> Answer {
     let sbst = Substitution::new();
     let goal_vars = goals_free_vars(goal);
-    let sbsts: Vec<Substitution> = dfs(&program, &goal, &sbst);
+    let sbsts = dfs(&program, &goal, &sbst);
     if goal_vars.is_empty() {
-        Answer::Valid(!sbsts.is_empty())
+        Answer::Valid(sbsts.is_some())
     } else {
-        let ans = sbsts
-            .iter()
-            .map(|sbst| select_vars(sbst, &goal_vars))
-            .collect();
-        Answer::Instance(ans)
+        match sbsts {
+            Some(sbsts) => {
+                let ans = sbsts
+                    .iter()
+                    .map(|sbst| select_vars(sbst, &goal_vars))
+                    .collect();
+                Answer::Satisfiable(Some(ans))
+            }
+            None => Answer::Satisfiable(None),
+        }
     }
 }
 
@@ -52,7 +57,7 @@ fn unify_list(mut ls: Vec<(Term, Term)>) -> Option<Substitution> {
     }
 }
 
-pub fn dfs(program: &Program, goals: &Goal, sbst_root: &Substitution) -> Vec<Substitution> {
+pub fn dfs(program: &Program, goals: &Goal, sbst_root: &Substitution) -> Option<Vec<Substitution>> {
     let mut goals = goals.clone();
     match goals.pop() {
         Some(goal) => {
@@ -63,20 +68,29 @@ pub fn dfs(program: &Program, goals: &Goal, sbst_root: &Substitution) -> Vec<Sub
                     Some(sbst_now) => {
                         let new_sbst = composite_sbst(&sbst_root, &sbst_now);
                         let mut newgoal = goals.clone();
-                        let mut goal2 = clause.assumptions.clone();
+                        let raw_goal2 = clause.assumptions.clone();
+                        let mut goal2 = goal_substitute(&raw_goal2, &sbst_now);
                         newgoal.append(&mut goal2);
-                        let sbst_leefs = dfs(program, &newgoal, &new_sbst);
-                        let mut local_ans = sbst_leefs
-                            .iter()
-                            .map(|sb| composite_sbst(&new_sbst, &sb))
-                            .collect::<Vec<Substitution>>();
-                        ans.append(&mut local_ans);
+                        match dfs(program, &newgoal, &new_sbst) {
+                            Some(sbst_leefs) => {
+                                let mut local_ans = sbst_leefs
+                                    .iter()
+                                    .map(|sb| composite_sbst(&new_sbst, &sb))
+                                    .collect::<Vec<Substitution>>();
+                                ans.append(&mut local_ans);
+                            }
+                            None => (),
+                        }
                     }
                     None => (),
                 }
             }
-            ans
+            if ans.is_empty() {
+                None
+            } else {
+                Some(ans)
+            }
         }
-        None => vec![sbst_root.clone()],
+        None => Some(vec![sbst_root.clone()]),
     }
 }

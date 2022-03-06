@@ -16,7 +16,7 @@ pub fn run(program: &str, goal: &str) -> String {
 
 #[test]
 fn parse_test() {
-    let goal_str = "q(X), r(X).";
-    let prog_str = "q(X) :- p(X).\np(a).";
+    let goal_str = "f(a).";
+    let prog_str = "f(X) :- g(X).\ng(b).";
     println!("{}", run(prog_str, goal_str));
 }
